@@ -12,14 +12,13 @@ import {
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore"
 import { auth, db } from "@/lib/firebase"
 import type { User } from "@/lib/types"
-import { useRouter } from "next/navigation"
 
 interface AuthContextType {
   user: User | null
   firebaseUser: FirebaseUser | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, userData: Partial<User> & { schoolName?: string }) => Promise<void>
+  signUp: (email: string, password: string, userData: Partial<User>) => Promise<void>
   signOut: () => Promise<void>
   updateUserProfile: (data: Partial<User>) => Promise<void>
 }
@@ -30,7 +29,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null)
   const [loading, setLoading] = useState(true)
-  const router = useRouter()
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -49,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             })
           } else {
             // User document doesn't exist, sign out
-            await firebaseSignOut(auth)
+            await firebaseSignOut()
             setUser(null)
           }
         } catch (error) {
@@ -74,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const signUp = async (email: string, password: string, userData: Partial<User> & { schoolName?: string }) => {
+  const signUp = async (email: string, password: string, userData: Partial<User>) => {
     try {
       const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, email, password)
 
@@ -105,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (userData.role === "school_admin" && userData.schoolId === firebaseUser.uid) {
         const schoolData = {
           id: firebaseUser.uid,
-          name: userData.schoolName || `${userData.profile?.firstName}'s School`,
+          name: userData.profile?.firstName + "'s School", // Default name, can be updated later
           adminId: firebaseUser.uid,
           email: firebaseUser.email!,
           address: userData.profile?.address || {
@@ -146,12 +144,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
-      await firebaseSignOut(auth)
-      setUser(null)
-      setFirebaseUser(null)
-      router.push("/auth/login")
+      await firebaseSignOut()
     } catch (error: any) {
-      console.error("Error signing out:", error)
       throw new Error(error.message || "Failed to sign out")
     }
   }

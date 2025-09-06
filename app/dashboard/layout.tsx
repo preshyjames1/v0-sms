@@ -13,7 +13,7 @@ export default function DashboardLayout({
 }) {
   return (
     <ProtectedRoute allowedRoles={["school_admin", "teacher", "student", "parent"]}>
-      <SidebarProvider defaultOpen={true}>
+      <SidebarProvider>
         <SidebarNav />
         <SidebarInset>{children}</SidebarInset>
       </SidebarProvider>

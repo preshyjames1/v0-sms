@@ -3,9 +3,6 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useAuth } from "@/lib/auth/context"
-import { useState, useEffect } from "react"
-import { doc, getDoc } from "firebase/firestore"
-import { db } from "@/lib/firebase"
 import {
   Sidebar,
   SidebarContent,
@@ -45,8 +42,6 @@ import {
   UserCheck,
   Building,
   CreditCard,
-  Shield,
-  Upload,
 } from "lucide-react"
 
 const navigationItems = [
@@ -57,16 +52,6 @@ const navigationItems = [
         title: "Dashboard",
         url: "/dashboard",
         icon: LayoutDashboard,
-      },
-    ],
-  },
-  {
-    title: "Role Management",
-    items: [
-      {
-        title: "Roles & Permissions",
-        url: "/dashboard/roles",
-        icon: Shield,
       },
     ],
   },
@@ -92,11 +77,6 @@ const navigationItems = [
         title: "Staff",
         url: "/dashboard/staff",
         icon: Building,
-      },
-      {
-        title: "Bulk Import",
-        url: "/dashboard/import",
-        icon: Upload,
       },
     ],
   },
@@ -160,36 +140,6 @@ const navigationItems = [
 export function SidebarNav() {
   const pathname = usePathname()
   const { user, signOut } = useAuth()
-  const [schoolName, setSchoolName] = useState<string>("Loading...")
-
-  useEffect(() => {
-    const fetchSchoolName = async () => {
-      if (user?.schoolId) {
-        try {
-          console.log("[v0] Fetching school data for schoolId:", user.schoolId)
-          const schoolDoc = await getDoc(doc(db, "schools", user.schoolId))
-          if (schoolDoc.exists()) {
-            const schoolData = schoolDoc.data()
-            console.log("[v0] School data found:", schoolData)
-            setSchoolName(schoolData.name || "My School")
-          } else {
-            console.log("[v0] School document not found, using fallback name")
-            const fallbackName = user.profile?.firstName ? `${user.profile.firstName}'s School` : "My School"
-            setSchoolName(fallbackName)
-          }
-        } catch (error) {
-          console.error("[v0] Error fetching school data:", error)
-          const fallbackName = user.profile?.firstName ? `${user.profile.firstName}'s School` : "My School"
-          setSchoolName(fallbackName)
-        }
-      } else {
-        console.log("[v0] No schoolId found in user object")
-        setSchoolName("My School")
-      }
-    }
-
-    fetchSchoolName()
-  }, [user?.schoolId, user?.profile?.firstName])
 
   const handleSignOut = async () => {
     try {
@@ -200,13 +150,13 @@ export function SidebarNav() {
   }
 
   return (
-    <Sidebar variant="inset" collapsible="icon">
+    <Sidebar variant="inset">
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-2">
           <School className="h-8 w-8 text-primary" />
           <div className="flex flex-col">
-            <span className="font-bold text-sm">{schoolName}</span>
-            <span className="text-xs text-muted-foreground">School Portal</span>
+            <span className="font-bold text-sm">SchoolManagement</span>
+            <span className="text-xs text-muted-foreground">System.com</span>
           </div>
         </div>
       </SidebarHeader>
@@ -269,10 +219,10 @@ export function SidebarNav() {
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
                   <Avatar className="h-8 w-8 rounded-lg">
-                    <AvatarImage src={user?.profile?.avatar || "/placeholder.svg"} alt={user?.profile?.firstName} />
+                    <AvatarImage src="/placeholder.svg" alt={user?.profile?.firstName} />
                     <AvatarFallback className="rounded-lg">
-                      {user?.profile?.firstName?.[0] || "U"}
-                      {user?.profile?.lastName?.[0] || ""}
+                      {user?.profile?.firstName?.[0]}
+                      {user?.profile?.lastName?.[0]}
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
@@ -293,10 +243,10 @@ export function SidebarNav() {
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                     <Avatar className="h-8 w-8 rounded-lg">
-                      <AvatarImage src={user?.profile?.avatar || "/placeholder.svg"} alt={user?.profile?.firstName} />
+                      <AvatarImage src="/placeholder.svg" alt={user?.profile?.firstName} />
                       <AvatarFallback className="rounded-lg">
-                        {user?.profile?.firstName?.[0] || "U"}
-                        {user?.profile?.lastName?.[0] || ""}
+                        {user?.profile?.firstName?.[0]}
+                        {user?.profile?.lastName?.[0]}
                       </AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">

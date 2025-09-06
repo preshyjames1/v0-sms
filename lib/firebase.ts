@@ -2,16 +2,17 @@ import { initializeApp, getApps, type FirebaseApp } from "firebase/app"
 import { getAuth, type Auth } from "firebase/auth"
 import { getFirestore, type Firestore } from "firebase/firestore"
 import { getStorage, type FirebaseStorage } from "firebase/storage"
-import { getFunctions, type Functions } from "firebase/functions"
 
+// Firebase configuration will be imported from the config file
 const firebaseConfig = {
-  apiKey: "AIzaSyBS1AgOBg8A8pBrzeyGHWtCmXXwta1xtQA",
-  authDomain: "schoolmanagementsystem2-bd70a.firebaseapp.com",
-  projectId: "schoolmanagementsystem2-bd70a",
-  storageBucket: "schoolmanagementsystem2-bd70a.firebasestorage.app",
-  messagingSenderId: "807582219930",
-  appId: "1:807582219930:web:c46894994c9b477167e923",
-  measurementId: "G-V9MYD6MSPT",
+  // Configuration will be loaded from environment variables or config file
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 }
 
 // Initialize Firebase
@@ -26,6 +27,5 @@ if (getApps().length === 0) {
 export const auth: Auth = getAuth(app)
 export const db: Firestore = getFirestore(app)
 export const storage: FirebaseStorage = getStorage(app)
-export const functions: Functions = getFunctions(app)
 
 export default app

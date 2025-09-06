@@ -29,7 +29,6 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [step, setStep] = useState(1)
-  const [success, setSuccess] = useState(false)
 
   const { signUp } = useAuth()
   const router = useRouter()
@@ -84,10 +83,9 @@ export default function RegisterPage() {
           phone: formData.phone,
         },
         schoolId: "", // Will be set to user ID in the signUp function
-        schoolName: formData.schoolName, // Added school name to signup data
       })
 
-      setSuccess(true)
+      router.push("/dashboard?welcome=true")
     } catch (error: any) {
       setError(error.message)
     } finally {
@@ -95,74 +93,9 @@ export default function RegisterPage() {
     }
   }
 
-  if (success) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20 p-4">
-        <div className="w-full max-w-md space-y-6">
-          <div className="text-center space-y-2">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors"
-            >
-              <School className="h-8 w-8" />
-              <span className="font-bold text-xl">SchoolManagementSystem.com</span>
-            </Link>
-          </div>
-
-          <Card className="border-0 shadow-lg">
-            <CardHeader className="text-center space-y-4">
-              <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                <CheckCircle className="h-8 w-8 text-green-600" />
-              </div>
-              <CardTitle className="text-2xl text-green-600">Account Created Successfully!</CardTitle>
-              <CardDescription className="text-base">
-                Welcome to SchoolManagementSystem.com! Your school account has been created and is ready to use.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-                <h3 className="font-semibold text-sm">Account Details:</h3>
-                <p className="text-sm text-muted-foreground">
-                  <strong>Name:</strong> {formData.firstName} {formData.lastName}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  <strong>Email:</strong> {formData.email}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  <strong>School:</strong> {formData.schoolName}
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="font-semibold text-sm">What's Next?</h3>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• Check your email for a welcome message</li>
-                  <li>• Sign in to access your dashboard</li>
-                  <li>• Start adding students, teachers, and staff</li>
-                  <li>• Explore all the features available</li>
-                </ul>
-              </div>
-
-              <Button onClick={() => router.push("/auth/login")} className="w-full">
-                Continue to Sign In
-              </Button>
-            </CardContent>
-          </Card>
-
-          <div className="text-center">
-            <Badge variant="secondary" className="text-xs">
-              <CheckCircle className="mr-1 h-3 w-3" />
-              14-day free trial started • No credit card required
-            </Badge>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20 p-4">
-      <div className="w-full max-w-lg space-y-6">
+      <div className="w-full max-w-md space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
           <Link
@@ -177,7 +110,7 @@ export default function RegisterPage() {
         </div>
 
         {/* Progress Indicator */}
-        <div className="flex items-center justify-center space-x-2 sm:space-x-4">
+        <div className="flex items-center justify-center space-x-4">
           <div className="flex items-center">
             <div
               className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
@@ -186,10 +119,9 @@ export default function RegisterPage() {
             >
               {step > 1 ? <CheckCircle className="h-4 w-4" /> : "1"}
             </div>
-            <span className="ml-2 text-xs sm:text-sm text-muted-foreground hidden sm:inline">Personal Info</span>
-            <span className="ml-2 text-xs text-muted-foreground sm:hidden">Info</span>
+            <span className="ml-2 text-sm text-muted-foreground">Personal Info</span>
           </div>
-          <div className={`w-6 sm:w-8 h-0.5 ${step >= 2 ? "bg-primary" : "bg-muted"}`} />
+          <div className={`w-8 h-0.5 ${step >= 2 ? "bg-primary" : "bg-muted"}`} />
           <div className="flex items-center">
             <div
               className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
@@ -198,8 +130,7 @@ export default function RegisterPage() {
             >
               2
             </div>
-            <span className="ml-2 text-xs sm:text-sm text-muted-foreground hidden sm:inline">School Setup</span>
-            <span className="ml-2 text-xs text-muted-foreground sm:hidden">Setup</span>
+            <span className="ml-2 text-sm text-muted-foreground">School Setup</span>
           </div>
         </div>
 
@@ -233,7 +164,7 @@ export default function RegisterPage() {
 
               {step === 1 ? (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name *</Label>
                       <Input
@@ -313,7 +244,6 @@ export default function RegisterPage() {
                         value={formData.password}
                         onChange={handleInputChange}
                         required
-                        className="pr-10"
                       />
                       <Button
                         type="button"
@@ -343,7 +273,6 @@ export default function RegisterPage() {
                         value={formData.confirmPassword}
                         onChange={handleInputChange}
                         required
-                        className="pr-10"
                       />
                       <Button
                         type="button"
@@ -367,18 +296,18 @@ export default function RegisterPage() {
                     </Alert>
                   )}
 
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <Button type="button" variant="outline" onClick={() => setStep(1)} className="w-full sm:w-1/2">
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" onClick={() => setStep(1)} className="w-full">
                       Back
                     </Button>
-                    <Button type="submit" className="w-full sm:w-1/2" disabled={loading || !validateStep2()}>
+                    <Button type="submit" className="w-full" disabled={loading || !validateStep2()}>
                       {loading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Creating...
+                          Creating Account...
                         </>
                       ) : (
-                        "Create Account"
+                        "Create School Account"
                       )}
                     </Button>
                   </div>

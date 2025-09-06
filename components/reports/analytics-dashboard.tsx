@@ -1,116 +1,57 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useAuth } from "@/lib/auth/context"
-import { collection, query, where, getDocs } from "firebase/firestore"
-import { db } from "@/lib/firebase"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts"
-import { Users, BookOpen, Calendar, Download } from "lucide-react"
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts"
+import { TrendingUp, TrendingDown, Users, BookOpen, Calendar, Download } from "lucide-react"
+
+const attendanceData = [
+  { month: "Jan", attendance: 92 },
+  { month: "Feb", attendance: 89 },
+  { month: "Mar", attendance: 94 },
+  { month: "Apr", attendance: 91 },
+  { month: "May", attendance: 88 },
+  { month: "Jun", attendance: 93 },
+]
+
+const gradeDistribution = [
+  { grade: "A", count: 45, color: "#22c55e" },
+  { grade: "B", count: 78, color: "#3b82f6" },
+  { grade: "C", count: 52, color: "#f59e0b" },
+  { grade: "D", count: 23, color: "#ef4444" },
+  { grade: "F", count: 8, color: "#6b7280" },
+]
+
+const subjectPerformance = [
+  { subject: "Mathematics", average: 85 },
+  { subject: "English", average: 78 },
+  { subject: "Science", average: 82 },
+  { subject: "History", average: 76 },
+  { subject: "Geography", average: 80 },
+]
 
 export function AnalyticsDashboard() {
-  const { user } = useAuth()
-  const [loading, setLoading] = useState(true)
-  const [analytics, setAnalytics] = useState({
-    totalStudents: 0,
-    totalTeachers: 0,
-    totalClasses: 0,
-    averageAttendance: 0,
-    attendanceData: [] as any[],
-    gradeDistribution: [] as any[],
-    subjectPerformance: [] as any[],
-  })
-
-  useEffect(() => {
-    const fetchAnalytics = async () => {
-      if (!user?.schoolId) return
-
-      try {
-        // Fetch students
-        const studentsQuery = query(
-          collection(db, "users"),
-          where("schoolId", "==", user.schoolId),
-          where("role", "==", "student"),
-          where("isActive", "==", true),
-        )
-        const studentsSnapshot = await getDocs(studentsQuery)
-        const totalStudents = studentsSnapshot.size
-
-        // Fetch teachers
-        const teachersQuery = query(
-          collection(db, "users"),
-          where("schoolId", "==", user.schoolId),
-          where("role", "==", "teacher"),
-          where("isActive", "==", true),
-        )
-        const teachersSnapshot = await getDocs(teachersQuery)
-        const totalTeachers = teachersSnapshot.size
-
-        // Fetch classes
-        const classesQuery = query(
-          collection(db, "classes"),
-          where("schoolId", "==", user.schoolId),
-          where("isActive", "==", true),
-        )
-        const classesSnapshot = await getDocs(classesQuery)
-        const totalClasses = classesSnapshot.size
-
-        // Fetch attendance data
-        const attendanceQuery = query(collection(db, "attendance"), where("schoolId", "==", user.schoolId))
-        const attendanceSnapshot = await getDocs(attendanceQuery)
-        const attendanceRecords = attendanceSnapshot.docs.map((doc) => doc.data())
-
-        // Calculate average attendance
-        const totalAttendanceRecords = attendanceRecords.length
-        const presentRecords = attendanceRecords.filter((record) => record.status === "present").length
-        const averageAttendance = totalAttendanceRecords > 0 ? (presentRecords / totalAttendanceRecords) * 100 : 0
-
-        // Generate monthly attendance data (simplified)
-        const attendanceData = [
-          { month: "Jan", attendance: Math.max(0, averageAttendance - 5 + Math.random() * 10) },
-          { month: "Feb", attendance: Math.max(0, averageAttendance - 3 + Math.random() * 6) },
-          { month: "Mar", attendance: Math.max(0, averageAttendance - 2 + Math.random() * 4) },
-          { month: "Apr", attendance: Math.max(0, averageAttendance - 1 + Math.random() * 2) },
-          { month: "May", attendance: Math.max(0, averageAttendance + Math.random() * 2) },
-          { month: "Jun", attendance: Math.max(0, averageAttendance + 1 + Math.random() * 2) },
-        ]
-
-        setAnalytics({
-          totalStudents,
-          totalTeachers,
-          totalClasses,
-          averageAttendance: Math.round(averageAttendance * 10) / 10,
-          attendanceData,
-          gradeDistribution: [], // Would need grades data from database
-          subjectPerformance: [], // Would need performance data from database
-        })
-      } catch (error) {
-        console.error("Error fetching analytics:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchAnalytics()
-  }, [user?.schoolId])
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground">Loading analytics...</div>
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Analytics Dashboard</h2>
-          <p className="text-muted-foreground">Real-time insights into school performance</p>
+          <p className="text-muted-foreground">Comprehensive insights into school performance</p>
         </div>
         <div className="flex gap-2">
           <Select defaultValue="current-term">
@@ -137,9 +78,10 @@ export function AnalyticsDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Students</p>
-                <p className="text-2xl font-bold">{analytics.totalStudents}</p>
+                <p className="text-2xl font-bold">1,247</p>
                 <div className="flex items-center gap-1 mt-1">
-                  <span className="text-sm text-muted-foreground">Active students</span>
+                  <TrendingUp className="h-4 w-4 text-green-600" />
+                  <span className="text-sm text-green-600">+5.2%</span>
                 </div>
               </div>
               <Users className="h-8 w-8 text-primary" />
@@ -152,9 +94,10 @@ export function AnalyticsDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Average Attendance</p>
-                <p className="text-2xl font-bold">{analytics.averageAttendance}%</p>
+                <p className="text-2xl font-bold">91.2%</p>
                 <div className="flex items-center gap-1 mt-1">
-                  <span className="text-sm text-muted-foreground">This term</span>
+                  <TrendingDown className="h-4 w-4 text-red-600" />
+                  <span className="text-sm text-red-600">-2.1%</span>
                 </div>
               </div>
               <Calendar className="h-8 w-8 text-primary" />
@@ -167,9 +110,10 @@ export function AnalyticsDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Active Classes</p>
-                <p className="text-2xl font-bold">{analytics.totalClasses}</p>
+                <p className="text-2xl font-bold">42</p>
                 <div className="flex items-center gap-1 mt-1">
-                  <span className="text-sm text-muted-foreground">Current term</span>
+                  <TrendingUp className="h-4 w-4 text-green-600" />
+                  <span className="text-sm text-green-600">+3</span>
                 </div>
               </div>
               <BookOpen className="h-8 w-8 text-primary" />
@@ -181,13 +125,16 @@ export function AnalyticsDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Teachers</p>
-                <p className="text-2xl font-bold">{analytics.totalTeachers}</p>
+                <p className="text-sm font-medium text-muted-foreground">Average GPA</p>
+                <p className="text-2xl font-bold">3.42</p>
                 <div className="flex items-center gap-1 mt-1">
-                  <span className="text-sm text-muted-foreground">Active staff</span>
+                  <TrendingUp className="h-4 w-4 text-green-600" />
+                  <span className="text-sm text-green-600">+0.15</span>
                 </div>
               </div>
-              <Users className="h-8 w-8 text-primary" />
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-primary font-bold">A</span>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -201,33 +148,61 @@ export function AnalyticsDashboard() {
             <CardTitle>Attendance Trend</CardTitle>
           </CardHeader>
           <CardContent>
-            {analytics.attendanceData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={analytics.attendanceData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="attendance" stroke="#22c55e" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                No attendance data available
-              </div>
-            )}
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={attendanceData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="attendance" stroke="#22c55e" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* Placeholder for future charts */}
+        {/* Grade Distribution */}
         <Card>
           <CardHeader>
-            <CardTitle>Performance Overview</CardTitle>
+            <CardTitle>Grade Distribution</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-              Performance data will be available when grades are recorded
-            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={gradeDistribution}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ grade, count }) => `${grade}: ${count}`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="count"
+                >
+                  {gradeDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Subject Performance */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Subject Performance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={subjectPerformance}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="subject" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="average" fill="#22c55e" />
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
