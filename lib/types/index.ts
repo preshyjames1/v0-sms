@@ -4,18 +4,87 @@ export interface User {
   role: UserRole
   schoolId: string
   profile: UserProfile
+  permissions?: Permission[]
+  customRole?: CustomRole
   createdAt: Date
   updatedAt: Date
   isActive: boolean
 }
 
-export type UserRole = "super_admin" | "school_admin" | "teacher" | "student" | "parent" | "accountant" | "librarian"
+export type UserRole =
+  | "super_admin"
+  | "school_admin"
+  | "sub_admin"
+  | "teacher"
+  | "student"
+  | "parent"
+  | "accountant"
+  | "librarian"
+  | "receptionist"
+  | "nurse"
+  | "security"
+  | "maintenance"
+
+export interface Permission {
+  module: PermissionModule
+  actions: PermissionAction[]
+}
+
+export type PermissionModule =
+  | "dashboard"
+  | "students"
+  | "teachers"
+  | "parents"
+  | "staff"
+  | "classes"
+  | "subjects"
+  | "timetable"
+  | "attendance"
+  | "examinations"
+  | "grades"
+  | "library"
+  | "transport"
+  | "hostel"
+  | "accounting"
+  | "fees"
+  | "payroll"
+  | "inventory"
+  | "messages"
+  | "announcements"
+  | "reports"
+  | "analytics"
+  | "settings"
+  | "billing"
+  | "users"
+  | "roles"
+
+export type PermissionAction = "view" | "create" | "edit" | "delete" | "export" | "import"
+
+export interface CustomRole {
+  id: string
+  name: string
+  description: string
+  permissions: Permission[]
+  schoolId: string
+  createdBy: string
+  createdAt: Date
+  updatedAt: Date
+  isActive: boolean
+}
+
+export interface RoleTemplate {
+  name: string
+  description: string
+  permissions: Permission[]
+  suggestedFor: UserRole[]
+}
 
 export interface UserProfile {
   firstName: string
   lastName: string
   phone?: string
   avatar?: string
+  avatarPath?: string
   address?: Address
   dateOfBirth?: Date
   gender?: "male" | "female" | "other"

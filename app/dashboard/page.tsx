@@ -1,7 +1,10 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth/context"
 import { useSearchParams } from "next/navigation"
+import { collection, query, where, getDocs } from "firebase/firestore"
+import { db } from "@/lib/firebase"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
 import { StatsCard } from "@/components/dashboard/stats-card"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,10 +26,90 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 
+interface DashboardStats {
+  totalStudents: number
+  totalTeachers: number
+  totalClasses: number
+  attendanceRate: number
+}
+
+interface Activity {
+  id: string
+  title: string
+  description: string
+  time: string
+  status: "success" | "pending" | "warning"
+  type: string
+}
+
 export default function DashboardPage() {
   const { user } = useAuth()
   const searchParams = useSearchParams()
   const isWelcome = searchParams.get("welcome") === "true"
+  const [stats, setStats] = useState<DashboardStats>({
+    totalStudents: 0,
+    totalTeachers: 0,
+    totalClasses: 0,
+    attendanceRate: 0,
+  })
+  const [recentActivities, setRecentActivities] = useState<Activity[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!user?.schoolId) return
+
+      try {
+        // Fetch students count
+        const studentsQuery = query(
+          collection(db, "users"),
+          where("schoolId", "==", user.schoolId),
+          where("role", "==", "student"),
+          where("isActive", "==", true),
+        )
+        const studentsSnapshot = await getDocs(studentsQuery)
+        const totalStudents = studentsSnapshot.size
+
+        // Fetch teachers count
+        const teachersQuery = query(
+          collection(db, "users"),
+          where("schoolId", "==", user.schoolId),
+          where("role", "==", "teacher"),
+          where("isActive", "==", true),
+        )
+        const teachersSnapshot = await getDocs(teachersQuery)
+        const totalTeachers = teachersSnapshot.size
+
+        // Fetch classes count
+        const classesQuery = query(
+          collection(db, "classes"),
+          where("schoolId", "==", user.schoolId),
+          where("isActive", "==", true),
+        )
+        const classesSnapshot = await getDocs(classesQuery)
+        const totalClasses = classesSnapshot.size
+
+        // Calculate attendance rate (mock for now)
+        const attendanceRate = totalStudents > 0 ? Math.round(totalStudents * 0.94 * 100) / 100 : 0
+
+        setStats({
+          totalStudents,
+          totalTeachers,
+          totalClasses,
+          attendanceRate,
+        })
+
+        // Fetch recent activities (mock data for now)
+        setRecentActivities([])
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDashboardData()
+  }, [user?.schoolId])
 
   const quickActions = [
     {
@@ -52,33 +135,6 @@ export default function DashboardPage() {
       description: "Communicate with users",
       href: "/dashboard/messages/new",
       icon: MessageSquare,
-    },
-  ]
-
-  const recentActivities = [
-    {
-      title: "New student enrollment",
-      description: "Sarah Johnson enrolled in Grade 10A",
-      time: "2 hours ago",
-      status: "success",
-    },
-    {
-      title: "Teacher attendance marked",
-      description: "Morning attendance completed for all classes",
-      time: "4 hours ago",
-      status: "success",
-    },
-    {
-      title: "Parent meeting scheduled",
-      description: "Meeting with John Doe's parents on Friday",
-      time: "1 day ago",
-      status: "pending",
-    },
-    {
-      title: "Assignment deadline approaching",
-      description: "Math assignment due in 2 days",
-      time: "2 days ago",
-      status: "warning",
     },
   ]
 
@@ -108,25 +164,30 @@ export default function DashboardPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatsCard
             title="Total Students"
-            value="1,234"
+            value={stats.totalStudents.toString()}
             description="Active enrollments"
             icon={GraduationCap}
-            trend={{ value: 12, label: "from last month", positive: true }}
+            trend={stats.totalStudents > 0 ? { value: 12, label: "from last month", positive: true } : undefined}
           />
           <StatsCard
             title="Teachers"
-            value="56"
+            value={stats.totalTeachers.toString()}
             description="Active staff members"
             icon={UserCheck}
-            trend={{ value: 8, label: "from last month", positive: true }}
+            trend={stats.totalTeachers > 0 ? { value: 8, label: "from last month", positive: true } : undefined}
           />
-          <StatsCard title="Classes" value="24" description="Active classes" icon={BookOpen} />
+          <StatsCard
+            title="Classes"
+            value={stats.totalClasses.toString()}
+            description="Active classes"
+            icon={BookOpen}
+          />
           <StatsCard
             title="Attendance Rate"
-            value="94.2%"
+            value={stats.attendanceRate > 0 ? `${stats.attendanceRate}%` : "N/A"}
             description="This week"
             icon={ClipboardCheck}
-            trend={{ value: 2.1, label: "from last week", positive: true }}
+            trend={stats.attendanceRate > 0 ? { value: 2.1, label: "from last week", positive: true } : undefined}
           />
         </div>
 
@@ -162,20 +223,28 @@ export default function DashboardPage() {
               <CardDescription>Latest updates from your school</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {recentActivities.map((activity, index) => (
-                <div key={index} className="flex items-start gap-3">
-                  <div className="mt-1">
-                    {activity.status === "success" && <CheckCircle className="h-4 w-4 text-green-500" />}
-                    {activity.status === "pending" && <Clock className="h-4 w-4 text-blue-500" />}
-                    {activity.status === "warning" && <AlertCircle className="h-4 w-4 text-yellow-500" />}
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium">{activity.title}</p>
-                    <p className="text-xs text-muted-foreground">{activity.description}</p>
-                    <p className="text-xs text-muted-foreground">{activity.time}</p>
-                  </div>
+              {recentActivities.length === 0 ? (
+                <div className="text-center py-8">
+                  <Clock className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">No recent activity</p>
+                  <p className="text-xs text-muted-foreground">Activity will appear here as you use the system</p>
                 </div>
-              ))}
+              ) : (
+                recentActivities.map((activity, index) => (
+                  <div key={index} className="flex items-start gap-3">
+                    <div className="mt-1">
+                      {activity.status === "success" && <CheckCircle className="h-4 w-4 text-green-500" />}
+                      {activity.status === "pending" && <Clock className="h-4 w-4 text-blue-500" />}
+                      {activity.status === "warning" && <AlertCircle className="h-4 w-4 text-yellow-500" />}
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <p className="text-sm font-medium">{activity.title}</p>
+                      <p className="text-xs text-muted-foreground">{activity.description}</p>
+                      <p className="text-xs text-muted-foreground">{activity.time}</p>
+                    </div>
+                  </div>
+                ))
+              )}
             </CardContent>
           </Card>
         </div>
@@ -188,17 +257,9 @@ export default function DashboardPage() {
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Morning Assembly</span>
-                <Badge variant="outline">8:00 AM</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Staff Meeting</span>
-                <Badge variant="outline">10:30 AM</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Parent Conference</span>
-                <Badge variant="outline">2:00 PM</Badge>
+              <div className="text-center py-4">
+                <Calendar className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No scheduled events</p>
               </div>
               <Link href="/dashboard/timetable">
                 <Button variant="outline" size="sm" className="w-full mt-2 bg-transparent">
@@ -214,17 +275,9 @@ export default function DashboardPage() {
               <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Grade submissions</span>
-                <Badge variant="destructive">Overdue</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Attendance review</span>
-                <Badge variant="secondary">Today</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Report cards</span>
-                <Badge variant="outline">This week</Badge>
+              <div className="text-center py-4">
+                <ClipboardCheck className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No pending tasks</p>
               </div>
               <Link href="/dashboard/reports">
                 <Button variant="outline" size="sm" className="w-full mt-2 bg-transparent">

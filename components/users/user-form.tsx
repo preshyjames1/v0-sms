@@ -2,29 +2,35 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/lib/auth/context"
+import { collection, query, where, getDocs } from "firebase/firestore"
+import { db } from "@/lib/firebase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Loader2, Upload, ArrowLeft } from "lucide-react"
+import { ProfilePictureUpload } from "@/components/upload/profile-picture-upload"
+import { Loader2, ArrowLeft, Eye, EyeOff } from "lucide-react"
 import type { User, UserRole } from "@/lib/types"
 import Link from "next/link"
 
 interface UserFormProps {
   user?: User
   userType: "students" | "teachers" | "parents" | "staff"
-  onSubmit: (userData: Partial<User>) => Promise<void>
+  onSubmit: (userData: Partial<User> & { password?: string }) => Promise<void>
   isLoading?: boolean
 }
 
 export function UserForm({ user, userType, onSubmit, isLoading = false }: UserFormProps) {
   const router = useRouter()
+  const { user: currentUser } = useAuth()
   const [error, setError] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
+  const [classes, setClasses] = useState<any[]>([])
   const [formData, setFormData] = useState({
     firstName: user?.profile?.firstName || "",
     lastName: user?.profile?.lastName || "",
@@ -32,6 +38,10 @@ export function UserForm({ user, userType, onSubmit, isLoading = false }: UserFo
     phone: user?.profile?.phone || "",
     dateOfBirth: user?.profile?.dateOfBirth ? new Date(user.profile.dateOfBirth).toISOString().split("T")[0] : "",
     gender: user?.profile?.gender || "",
+    avatar: user?.profile?.avatar || "",
+    avatarPath: user?.profile?.avatarPath || "",
+    password: "",
+    classId: user?.profile?.classId || "",
     address: {
       street: user?.profile?.address?.street || "",
       city: user?.profile?.address?.city || "",
@@ -42,6 +52,30 @@ export function UserForm({ user, userType, onSubmit, isLoading = false }: UserFo
     role: user?.role || getRoleFromUserType(userType),
     isActive: user?.isActive ?? true,
   })
+
+  useEffect(() => {
+    const fetchClasses = async () => {
+      if (userType !== "students" || !currentUser?.schoolId) return
+
+      try {
+        const classesQuery = query(
+          collection(db, "classes"),
+          where("schoolId", "==", currentUser.schoolId),
+          where("isActive", "==", true),
+        )
+        const classesSnapshot = await getDocs(classesQuery)
+        const classesData = classesSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        setClasses(classesData)
+      } catch (error) {
+        console.error("Error fetching classes:", error)
+      }
+    }
+
+    fetchClasses()
+  }, [userType, currentUser?.schoolId])
 
   function getRoleFromUserType(type: string): UserRole {
     switch (type) {
@@ -76,12 +110,39 @@ export function UserForm({ user, userType, onSubmit, isLoading = false }: UserFo
     }
   }
 
+  const handleImageUpdate = (url: string, path: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      avatar: url,
+      avatarPath: path,
+    }))
+  }
+
+  const generateRandomPassword = () => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*"
+    let password = ""
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    setFormData((prev) => ({ ...prev, password }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
 
+    if (!user && !formData.password) {
+      setError("Password is required for new users")
+      return
+    }
+
+    if (!user && formData.password.length < 6) {
+      setError("Password must be at least 6 characters long")
+      return
+    }
+
     try {
-      const userData: Partial<User> = {
+      const userData: Partial<User> & { password?: string } = {
         email: formData.email,
         role: formData.role,
         isActive: formData.isActive,
@@ -91,8 +152,15 @@ export function UserForm({ user, userType, onSubmit, isLoading = false }: UserFo
           phone: formData.phone,
           dateOfBirth: formData.dateOfBirth ? new Date(formData.dateOfBirth) : undefined,
           gender: formData.gender as "male" | "female" | "other" | undefined,
+          avatar: formData.avatar,
+          avatarPath: formData.avatarPath,
           address: formData.address,
+          ...(userType === "students" && formData.classId && { classId: formData.classId }),
         },
+      }
+
+      if (!user && formData.password) {
+        userData.password = formData.password
       }
 
       await onSubmit(userData)
@@ -134,19 +202,14 @@ export function UserForm({ user, userType, onSubmit, isLoading = false }: UserFo
             <CardDescription>Basic details about the user</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={user?.profile?.avatar || "/placeholder.svg"} />
-                <AvatarFallback className="text-lg">
-                  {formData.firstName[0]}
-                  {formData.lastName[0]}
-                </AvatarFallback>
-              </Avatar>
-              <Button type="button" variant="outline" size="sm">
-                <Upload className="mr-2 h-4 w-4" />
-                Upload Photo
-              </Button>
-            </div>
+            <ProfilePictureUpload
+              currentImage={formData.avatar}
+              currentImagePath={formData.avatarPath}
+              onImageUpdate={handleImageUpdate}
+              onError={setError}
+              userName={`${formData.firstName} ${formData.lastName}`.trim() || "User"}
+              className="max-w-sm"
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -224,8 +287,87 @@ export function UserForm({ user, userType, onSubmit, isLoading = false }: UserFo
                 </Select>
               </div>
             </div>
+
+            {userType === "students" && (
+              <div className="space-y-2">
+                <Label htmlFor="classId">Assign to Class</Label>
+                <Select
+                  value={formData.classId}
+                  onValueChange={(value) => handleInputChange("classId", value)}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a class (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Class Assigned</SelectItem>
+                    {classes.map((classData) => (
+                      <SelectItem key={classData.id} value={classData.id}>
+                        {classData.name} - {classData.section}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  Assign this student to a class. You can change this later if needed.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
+
+        {!isEditing && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Authentication Settings</CardTitle>
+              <CardDescription>Set login credentials for this user</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="password">Password *</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={(e) => handleInputChange("password", e.target.value)}
+                    placeholder="Enter password (min. 6 characters)"
+                    required
+                    disabled={isLoading}
+                    className="pr-20"
+                  />
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowPassword(!showPassword)}
+                      disabled={isLoading}
+                      className="h-8 w-8 p-0"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={generateRandomPassword}
+                    disabled={isLoading}
+                  >
+                    Generate Random Password
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  This password will be used by the user to access their dashboard. Make sure to share it securely with
+                  them.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Address Information */}
         <Card>

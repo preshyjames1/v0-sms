@@ -2,72 +2,50 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/lib/auth/context"
+import { collection, query, where, getDocs, doc, updateDoc } from "firebase/firestore"
+import { db } from "@/lib/firebase"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
 import { UserTable } from "@/components/users/user-table"
+import { Button } from "@/components/ui/button"
+import { Plus, Upload } from "lucide-react"
+import Link from "next/link"
 import type { User } from "@/lib/types"
-
-// Mock data - replace with actual Firebase queries
-const mockStudents: User[] = [
-  {
-    id: "1",
-    email: "john.doe@student.school.com",
-    role: "student",
-    schoolId: "school1",
-    profile: {
-      firstName: "John",
-      lastName: "Doe",
-      phone: "+1 (555) 123-4567",
-      dateOfBirth: new Date("2008-05-15"),
-      gender: "male",
-      address: {
-        street: "123 Main St",
-        city: "Springfield",
-        state: "IL",
-        country: "USA",
-        zipCode: "62701",
-      },
-    },
-    createdAt: new Date("2024-01-15"),
-    updatedAt: new Date("2024-01-15"),
-    isActive: true,
-  },
-  {
-    id: "2",
-    email: "jane.smith@student.school.com",
-    role: "student",
-    schoolId: "school1",
-    profile: {
-      firstName: "Jane",
-      lastName: "Smith",
-      phone: "+1 (555) 987-6543",
-      dateOfBirth: new Date("2007-09-22"),
-      gender: "female",
-      address: {
-        street: "456 Oak Ave",
-        city: "Springfield",
-        state: "IL",
-        country: "USA",
-        zipCode: "62702",
-      },
-    },
-    createdAt: new Date("2024-01-10"),
-    updatedAt: new Date("2024-01-10"),
-    isActive: true,
-  },
-]
 
 export default function StudentsPage() {
   const router = useRouter()
+  const { user } = useAuth()
   const [students, setStudents] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Simulate loading data
-    setTimeout(() => {
-      setStudents(mockStudents)
-      setLoading(false)
-    }, 1000)
-  }, [])
+    const fetchStudents = async () => {
+      if (!user?.schoolId) return
+
+      try {
+        const studentsQuery = query(
+          collection(db, "users"),
+          where("schoolId", "==", user.schoolId),
+          where("role", "==", "student"),
+          where("isActive", "==", true),
+        )
+
+        const studentsSnapshot = await getDocs(studentsQuery)
+        const studentsData = studentsSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as User[]
+
+        setStudents(studentsData)
+      } catch (error) {
+        console.error("Error fetching students:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStudents()
+  }, [user?.schoolId])
 
   const handleView = (student: User) => {
     router.push(`/dashboard/students/${student.id}`)
@@ -79,8 +57,17 @@ export default function StudentsPage() {
 
   const handleDelete = async (student: User) => {
     if (confirm(`Are you sure you want to delete ${student.profile.firstName} ${student.profile.lastName}?`)) {
-      // Implement delete logic
-      console.log("Delete student:", student.id)
+      try {
+        await updateDoc(doc(db, "users", student.id), {
+          isActive: false,
+          updatedAt: new Date(),
+        })
+
+        // Remove from local state
+        setStudents((prev) => prev.filter((s) => s.id !== student.id))
+      } catch (error) {
+        console.error("Error deleting student:", error)
+      }
     }
   }
 
@@ -98,6 +85,27 @@ export default function StudentsPage() {
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
       <DashboardHeader breadcrumbs={[{ title: "Dashboard", href: "/dashboard" }, { title: "Students" }]} />
+
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Students</h1>
+          <p className="text-muted-foreground">Manage your school's students</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link href="/dashboard/import">
+            <Button variant="outline" className="flex items-center gap-2 bg-transparent">
+              <Upload className="h-4 w-4" />
+              Bulk Import
+            </Button>
+          </Link>
+          <Link href="/dashboard/students/new">
+            <Button className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Add Student
+            </Button>
+          </Link>
+        </div>
+      </div>
 
       <UserTable users={students} userType="students" onView={handleView} onEdit={handleEdit} onDelete={handleDelete} />
     </div>
